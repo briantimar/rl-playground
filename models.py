@@ -14,7 +14,7 @@ class Policy(torch.nn.Module):
         """Sample action and compute its log-probability under model and input. 
             input: tensor of input values
             action: (batch_size, k) tensor of actions, with k an integer in 0, ... , num_actions -1"""
-        logits = self(x)
+        logits = self(input)
         probs = Categorical(logits=logits)
         action = probs.sample()
         logprobs = probs.log_prob(action)
