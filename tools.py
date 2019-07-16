@@ -35,10 +35,19 @@ def do_episode(policy, env, max_timesteps):
 
     return state_trajectory, action_trajectory, rewards, log_probs
 
+def render_trajectory(env, actions):
+    """Render environment under list of (numpy) actions"""
+    __ = env.reset()
+    env.render()
+    for a in actions:
+        env.step(a)
+        env.render()
+    return env
+
 if __name__ == '__main__':
     from models import MLP
     policy = MLP([4,10,2])
     env = gym.make('CartPole-v0')
     max_timesteps=100
     states, actions, rewards, lps = do_episode(policy, env, max_timesteps)
-    
+    render_trajectory(env, actions.numpy())
