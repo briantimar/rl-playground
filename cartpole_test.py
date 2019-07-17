@@ -14,9 +14,9 @@ num_batches = 10
 
 # states, actions, rewards, log_probs = do_episode(policy, env, max_timesteps)
 
-optimizer = torch.optim.Adam(policy.parameters(),lr=.1)
+# optimizer = torch.optim.Adam(policy.parameters(),lr=.1)
 
-avg_returns = do_vpg_training(policy, env, max_timesteps, 
-                            optimizer=optimizer,batch_size=batch_size, num_batches=num_batches)
+# avg_returns = do_vpg_training(policy, env, max_timesteps, 
+#                             optimizer=optimizer,batch_size=batch_size, num_batches=num_batches)
 
-s, a, r, lp = do_episode(policy, env, max_timesteps=1000, stop_on_done=True, render=True)
+s, a, r, lp = do_episode(policy, env, max_timesteps=1000, stop_on_done=False, render=True)
