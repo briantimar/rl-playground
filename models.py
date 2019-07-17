@@ -20,6 +20,17 @@ class Policy(torch.nn.Module):
         logprobs = probs.log_prob(action)
         return action, logprobs
 
+    def save(self, path):
+        """Saves the model's state dict to the path provided"""
+        torch.save(self.state_dict(), path)
+
+    
+    def load(self, path):
+        """Load model from param_dict at the specified path."""
+        state_dict = torch.load(path)
+        self.load_state_dict(state_dict)
+
+
 class MLP(Policy):
 
     def __init__(self, layer_sizes, activation=torch.relu):
