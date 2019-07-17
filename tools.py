@@ -38,14 +38,7 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True):
 
     return state_trajectory, action_trajectory, rewards, log_probs
 
-def render_trajectory(env, actions):
-    """Render environment under list of (numpy) actions"""
-    __ = env.reset()
-    env.render()
-    for a in actions:
-        env.step(a)
-        env.render()
-    return env
+
 
 def effective_cost_function(log_probs, rewards):
     """ Computes a scalar torch tensor whose gradient is an estimator of the expected-return cost function
@@ -77,7 +70,7 @@ def do_vpg_training(policy, env, max_episode_timesteps,
             for i in range(batch_size):
                 # run a single episode
                 states, actions, rewards, log_probs = do_episode(policy, env, 
-                                                max_timesteps=max_episode_timesteps)
+                                                max_timesteps=max_episode_timesteps, stop_on_done=False)
                 batch_rewards.append(rewards)
                 batch_log_probs.append(log_probs)
     
