@@ -4,12 +4,14 @@ import numpy as np
 #cart-pole environment
 env = gym.make('CartPole-v0')
 env.reset()
-initact=0
-act=initact
+
+rewards = []
+observations = []
 for _ in range(1000):
     env.render()
-    # env.step(env.action_space.sample())
     # obs = position, velocity, angle, angular velocity
-    obs, reward, done, info = env.step(act)
-    act = obs[2] >0
+    obs, reward, done, info = env.step(env.action_space.sample())
+    rewards.append(reward)
+    observations.append(obs)
+    
 env.close()
