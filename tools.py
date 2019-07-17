@@ -2,12 +2,13 @@ import numpy as np
 import gym
 import torch
 
-def do_episode(policy, env, max_timesteps, stop_on_done=True):
+def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
     """ Run one episode.
         policy: a stochastic policy model. Given current states as inputs, outputs logits which define probabilities of various actions.
         env: openai gym environment.
         max_timesteps: max number of timesteps the environment is allowed to run (ie one episode)
-
+        stop_on_done: bool, whether to stop when the environment is 'done'.
+        render: bool, whether to render the environment.
         Returns: states, actions, rewards,  log_probs
         """
     #sample initial state from the environment
@@ -18,6 +19,8 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True):
     log_probs = []
 
     for t in range(max_timesteps):
+        if render:
+            env.render()
         #sample action from policy
         action, log_prob = policy.sample_action_with_log_prob(obs)
         action_trajectory.append(action)
