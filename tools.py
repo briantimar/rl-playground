@@ -48,8 +48,8 @@ def compute_rewards_to_go(rewards, discount=1.0):
             and gamma is the time-discounting factor.
         """
     Q = torch.zeros_like(rewards)
-    running_sum = torch.zeros(rewards.size(1))
-    for i in range(Q.size(1)):
+    running_sum = torch.zeros(rewards.size(0))
+    for i in reversed(range(Q.size(1))):
         running_sum += rewards[:,i] * discount**i
         Q[:,i] = running_sum
     return Q   
