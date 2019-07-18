@@ -55,16 +55,17 @@ def compute_rewards_to_go(rewards, discount=1.0):
     return Q   
 
 
-def effective_cost_function(log_probs, rewards):
+def effective_cost_function(log_probs, rewards, states, baseline=None):
     """ Computes a scalar torch tensor whose gradient is an estimator of the expected-return cost function
         log_probs: (N,T) tensor of log-probabilities
         rewards: (N,T) tensor of rewards
+        states: (N, T) tensor of states immediately prior to rewards
+        baseline: if not None, a function of the state which is subtracted from the reward-to-go. Should return
+        tensor of the same shape as states.
         """
-    #switch to numpy to use negative indexing...
-    rewards = rewards.numpy()
-    #TODO better way to do this. right now I'm copying bc torch complains about negative strides
-    reward_to_go =np.cumsum(rewards[:,::-1], axis=1)[:,::-1].copy()
-    reward_to_go = torch.tensor(reward_to_go, dtype=log_probs.dtype)
+    reward_to_go = compute_rewards_to_go(rewards)
+    if baseline is not None:
+        reward_to_go = reward_to_go - baseline(states)
     return - (reward_to_go * log_probs).mean()
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
@@ -82,17 +83,21 @@ def do_vpg_training(policy, env, max_episode_timesteps,
         for ib in range(num_batches):
             batch_rewards = []
             batch_log_probs = []
+            batch_states = []
             for i in range(batch_size):
                 # run a single episode
                 states, actions, rewards, log_probs = do_episode(policy, env, 
                                                 max_timesteps=max_episode_timesteps, stop_on_done=False)
                 batch_rewards.append(rewards)
                 batch_log_probs.append(log_probs)
+                batch_states.append(states[:-1])
     
-
             batch_rewards = torch.stack(batch_rewards)
             batch_log_probs = torch.stack(batch_log_probs)
-            loss = effective_cost_function(batch_log_probs, batch_rewards)
+            batch_states = torch.stack(batch_states)
+
+            loss = effective_cost_function(batch_log_probs, batch_rewards, batch_states,  
+                                                            baseline=None)
             
             avg_return = batch_rewards.mean(dim=0).sum().numpy()
             if verbose:
