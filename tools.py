@@ -69,7 +69,8 @@ def effective_cost_function(log_probs, rewards, states, baseline=None):
     return - (reward_to_go * log_probs).mean()
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
-                    optimizer, batch_size, num_batches, verbose=True):
+                    optimizer, batch_size, num_batches, 
+                        baseline=None, verbose=True):
     """ Run vanilla policy-grad training on the given policy network and environment.
         policy: torch model for the stochastic policy
         env: openai gym environment
