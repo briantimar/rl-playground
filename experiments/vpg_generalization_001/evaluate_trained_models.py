@@ -34,6 +34,8 @@ def make_filename(model_name, seed_index):
                         'cartpolev0_{0}_{1}'.format(model_name, seed_index))
 
 env = gym.make('CartPole-v0')
+#allow longer eval runs!
+env._max_episode_timesteps=1000
 
 returns = {}
 
