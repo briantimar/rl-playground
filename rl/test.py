@@ -5,7 +5,7 @@ import unittest
 class testVPG(unittest.TestCase):
 
     def test_compute_reward_to_go(self):
-        from tools import compute_rewards_to_go
+        from .tools import compute_rewards_to_go
         rewards = torch.tensor([[1, 0, 1, 1], 
                                 [0, 0, 1, 1]],dtype=torch.float)
         Qtarget = torch.tensor([[3, 2, 2, 1], 
