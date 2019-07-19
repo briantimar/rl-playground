@@ -1,5 +1,6 @@
 import torch
 from torch.distributions.categorical import Categorical
+from dataclasses import dataclass
 
 class Policy(torch.nn.Module):
     """ Feed-forward network that represents a stochastic policy.
@@ -50,3 +51,44 @@ class MLP(Policy):
             if i < self.num_layer - 2 and self.activation is not None:
                 x = self.activation(x)
         return x
+
+@dataclass
+class HyperParams:
+    """Class holding hyperparameters for defining and training pytorch models"""
+    lr: float = .01
+    layer_sizes: list = []
+    batch_size: int = 0
+    epochs: int = 0
+
+
+class ModelStepper:
+    """Class to package a trainable model. Holds the model's trainable params and hyperparams, 
+    and updates and evaluates on demand."""
+
+    def __init__(self, modelfactory, lossfn, hyperparams, optimizer):
+        """ modelfactory: model constructor implementing a create_from_hyperparams method.
+            lossfn: given model output and targets, computes loss.
+            hyperparams: dataclass holding architecture and training specs
+            optimizer: something from torch.optim. Currently only takes an lr argument!
+            """
+        self.model = modelfactory.create_from_hyperparams(hyperparams)
+        self.hyperparams = hyperparams
+        self.optimizer = optimizer(self.model.parameters(), lr=hyperparams.lr)
+        self.lossfn = lossfn
+
+    def step(self, inputs, targets):
+        """ Take a gradient descent step"""
+        self.model.train()
+        outputs = self.model(inputs)
+        loss = self.lossfn(outputs, targets)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+    def eval(self, inputs):
+        """ Evaluate model on the inputs provided """
+        self.model.eval()
+        return self.model(inputs)
+
+    
+    
