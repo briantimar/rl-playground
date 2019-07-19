@@ -1,8 +1,8 @@
 import sys
 sys.path.append('../..')
-from models import MLP
+from rl.models import MLP
 import os
-from tools import do_vpg_training
+from rl.tools import do_vpg_training
 import gym
 import numpy as np
 import torch

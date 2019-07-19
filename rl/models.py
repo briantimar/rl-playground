@@ -50,8 +50,3 @@ class MLP(Policy):
             if i < self.num_layer - 2 and self.activation is not None:
                 x = self.activation(x)
         return x
-
-if __name__ == '__main__':
-    mlp = MLP([2, 10, 2])
-    x = torch.randn(5,2)
-    actions, lps = mlp.sample_action_with_log_prob(x)

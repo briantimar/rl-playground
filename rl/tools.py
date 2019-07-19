@@ -155,17 +155,3 @@ def get_sample_trajectory(policy, env, halt_on_done=False, max_timesteps=200):
         t += 1
     return actions, rewards
 
-
-if __name__ == '__main__':
-    from models import MLP
-    policy = MLP([4,10,2])
-    env = gym.make('CartPole-v0')
-    max_timesteps=200
-    batch_size = 100
-    num_batches = 20
-    optimizer = torch.optim.Adam(policy.parameters(),lr=.1)
-
-    avg_returns = do_vpg_training(policy, env, max_timesteps, 
-                                optimizer=optimizer,batch_size=batch_size, num_batches=num_batches)
-    traj, rewards = get_sample_trajectory(policy, env)
-    render_trajectory(env, traj)
