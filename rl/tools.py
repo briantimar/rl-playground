@@ -59,17 +59,17 @@ def make_running_average_Q_baseline(running_average_Q):
         return running_average_Q.view(1,-1)
     return b
 
-
 def effective_cost_function(log_probs, rewards_to_go, states, 
                                         running_average_Q=None,
+                                        value_model = None,
                                         baseline=None
                                                         ):
     """ Computes a scalar torch tensor whose gradient is an estimator of the expected-return cost function
         log_probs: (N,T) tensor of log-probabilities
         rewards_to_go: (N,T) tensor of future rewards from each action in trajectory
         states: (N, T) tensor of states immediately prior to rewards
-        baseline: if not None, a function of the state which is subtracted from the reward-to-go. Should return
-        tensor of the same shape as states.
+        baseline: if not None, string specifying the type of baseline to apply
+        value
         """
     if baseline is not None:
         if (baseline not in baseline_functions.keys()):
@@ -78,6 +78,10 @@ def effective_cost_function(log_probs, rewards_to_go, states,
             if running_average_Q is None:
                 raise ValueError("Please supply running average Q")
             baselinefn = make_running_average_Q_baseline(running_average_Q)
+        elif baseline == 'value_model':
+            if value_model is None:
+                raise ValueError("Please supply value model")
+            baselinefn = value_model
         rewards_to_go = rewards_to_go - baselinefn(states)
 
     return - (rewards_to_go * log_probs).mean()
