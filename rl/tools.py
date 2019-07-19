@@ -59,7 +59,6 @@ def make_running_average_Q_baseline(running_average_Q):
         return running_average_Q.view(1,-1)
     return b
 
-baseline_functions = {'running_average_Q' : make_running_average_Q_baseline}
 
 def effective_cost_function(log_probs, rewards_to_go, states, 
                                         running_average_Q=None,
