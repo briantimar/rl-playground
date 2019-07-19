@@ -84,6 +84,7 @@ class ModelStepper:
         self.hyperparams = hyperparams
         self.optimizer = optimizer(self.model.parameters(), lr=hyperparams.lr)
         self.lossfn = lossfn
+        self.losses = []
 
     def step(self, inputs, targets):
         """ Take a gradient descent step"""
@@ -93,6 +94,8 @@ class ModelStepper:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        self.losses.append(loss.detach().numpy())
 
     def eval(self, inputs):
         """ Evaluate model on the inputs provided """
