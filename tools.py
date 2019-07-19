@@ -79,9 +79,9 @@ def effective_cost_function(log_probs, rewards_to_go, states,
             if running_average_Q is None:
                 raise ValueError("Please supply running average Q")
             baselinefn = make_running_average_Q_baseline(running_average_Q)
-        reward_to_go = reward_to_go - baselinefn(states)
+        rewards_to_go = rewards_to_go - baselinefn(states)
 
-    return - (reward_to_go * log_probs).mean()
+    return - (rewards_to_go * log_probs).mean()
 
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
@@ -98,7 +98,7 @@ def do_vpg_training(policy, env, max_episode_timesteps,
     avg_returns = []
     try:
         # running average of the reward-to-go
-        running_average_Q = None
+        running_average_Q = torch.zeros(1, max_episode_timesteps)
 
         for ib in range(num_batches):
             batch_rewards = []
@@ -116,12 +116,8 @@ def do_vpg_training(policy, env, max_episode_timesteps,
             batch_log_probs = torch.stack(batch_log_probs)
             batch_states = torch.stack(batch_states)
 
-            rewards_to_go = compute_rewards_to_go(rewards, discount=discount)
-
-            if ib == 0:
-                running_average_Q = rewards_to_go.mean(dim=0)
-            else:
-                running_average_Q = .9 * running_average_Q + .1 * rewards_to_go.mean(dim=0)
+            rewards_to_go = compute_rewards_to_go(batch_rewards, discount=discount)
+            running_average_Q = .9 * running_average_Q + .1 * rewards_to_go.mean(dim=0)
 
             loss = effective_cost_function(batch_log_probs, rewards_to_go, batch_states,  
                                                             running_average_Q=running_average_Q,
