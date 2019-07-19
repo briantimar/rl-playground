@@ -54,23 +54,39 @@ def compute_rewards_to_go(rewards, discount=1.0):
         Q[:,i] = running_sum
     return Q   
 
+def make_running_average_Q_baseline(running_average_Q):
+    def b(states):
+        return running_average_Q.view(1,-1)
+    return b
 
-def effective_cost_function(log_probs, rewards, states, baseline=None):
+baseline_functions = {'running_average_Q' : make_running_average_Q_baseline}
+
+def effective_cost_function(log_probs, rewards_to_go, states, 
+                                        running_average_Q=None,
+                                        baseline=None
+                                                        ):
     """ Computes a scalar torch tensor whose gradient is an estimator of the expected-return cost function
         log_probs: (N,T) tensor of log-probabilities
-        rewards: (N,T) tensor of rewards
+        rewards_to_go: (N,T) tensor of future rewards from each action in trajectory
         states: (N, T) tensor of states immediately prior to rewards
         baseline: if not None, a function of the state which is subtracted from the reward-to-go. Should return
         tensor of the same shape as states.
         """
-    reward_to_go = compute_rewards_to_go(rewards)
     if baseline is not None:
-        reward_to_go = reward_to_go - baseline(states)
+        if (baseline not in baseline_functions.keys()):
+            raise NotImplementedError
+        if baseline == 'running_average_Q':
+            if running_average_Q is None:
+                raise ValueError("Please supply running average Q")
+            baselinefn = make_running_average_Q_baseline(running_average_Q)
+        reward_to_go = reward_to_go - baselinefn(states)
+
     return - (reward_to_go * log_probs).mean()
+
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
                     optimizer, batch_size, num_batches, 
-                        baseline=None, verbose=True):
+                        baseline=None, discount=1.0, verbose=True):
     """ Run vanilla policy-grad training on the given policy network and environment.
         policy: torch model for the stochastic policy
         env: openai gym environment
@@ -81,6 +97,9 @@ def do_vpg_training(policy, env, max_episode_timesteps,
     
     avg_returns = []
     try:
+        # running average of the reward-to-go
+        running_average_Q = None
+
         for ib in range(num_batches):
             batch_rewards = []
             batch_log_probs = []
@@ -97,8 +116,16 @@ def do_vpg_training(policy, env, max_episode_timesteps,
             batch_log_probs = torch.stack(batch_log_probs)
             batch_states = torch.stack(batch_states)
 
-            loss = effective_cost_function(batch_log_probs, batch_rewards, batch_states,  
-                                                            baseline=None)
+            rewards_to_go = compute_rewards_to_go(rewards, discount=discount)
+
+            if ib == 0:
+                running_average_Q = rewards_to_go.mean(dim=0)
+            else:
+                running_average_Q = .9 * running_average_Q + .1 * rewards_to_go.mean(dim=0)
+
+            loss = effective_cost_function(batch_log_probs, rewards_to_go, batch_states,  
+                                                            running_average_Q=running_average_Q,
+                                                            baseline=baseline)
             
             avg_return = batch_rewards.mean(dim=0).sum().numpy()
             if verbose:
