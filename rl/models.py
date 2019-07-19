@@ -52,11 +52,20 @@ class MLP(Policy):
                 x = self.activation(x)
         return x
 
+    @classmethod
+    def create_from_hyperparams(cls, hp):
+        layer_sizes = hp.layer_sizes
+        if hasattr(hp, 'activation'):
+            activation = hp.activation
+        else:
+            activation = torch.relu
+        return cls(layer_sizes, activation=activation)
+
 @dataclass
 class HyperParams:
     """Class holding hyperparameters for defining and training pytorch models"""
     lr: float = .01
-    layer_sizes: list = []
+    layer_sizes: tuple = ()
     batch_size: int = 0
     epochs: int = 0
 
