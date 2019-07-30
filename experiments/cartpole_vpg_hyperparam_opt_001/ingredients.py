@@ -36,8 +36,8 @@ def environment_config():
     
 
 @environment.capture
-def get_env(env_name, episodes, max_episode_timesteps):
+def get_env(env_name):
     """Returns environment and episode limitations."""
     env = gym.make(env_name)
-    return env, episodes, max_episode_timesteps
+    return env
 

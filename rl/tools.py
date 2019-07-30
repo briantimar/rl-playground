@@ -223,7 +223,7 @@ def do_pg_training(policy, env, max_episode_timesteps,
     
             #loggers, if any
             if avg_return_logger is not None:
-                avg_return_logger(avg_return)
+                avg_return_logger(avg_return.item())
             if loss_logger is not None:
                 loss_logger(loss.detach().item())
 

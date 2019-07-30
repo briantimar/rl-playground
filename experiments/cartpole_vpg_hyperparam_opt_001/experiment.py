@@ -1,4 +1,5 @@
 from sacred import Experiment, Ingredient
+from sacred.observers import MongoObserver
 import gym 
 import torch
 import sys
@@ -8,6 +9,9 @@ from ingredients import model, environment
 from ingredients import get_model, get_env
 training = Experiment('do-cartpole-training', 
                         ingredients=(model, environment))
+
+#log training stats in Mongodb
+training.observers.append(MongoObserver.create())
 
 @training.config
 def training_config():
@@ -29,8 +33,9 @@ def hyperparam_config():
     discount = 1.0
 
 @training.automain
-def train(baseline, episodes, max_episode_timesteps,
-            lr, batch_size, discount, seed):
+def train( max_episode_timesteps,
+                episodes, batch_size,baseline,
+            lr, discount, seed):
     """ Train a single model via policy gradient. """
     
     from torch.optim import Adam
@@ -40,6 +45,15 @@ def train(baseline, episodes, max_episode_timesteps,
     policy = get_model()
     policy_optimizer = Adam(policy.parameters(), lr=lr)
 
+    env = get_env()
+    def avg_return_logger(r):
+        training.log_scalar("training.avg_return", r)
+    def loss_logger(l):
+        training.log_scalar("training.loss", l)
 
-    env = get_env
-    __ = do_pg_training(policy, env, max_episode_timesteps, )
+    avg_return = do_pg_training(policy, env, max_episode_timesteps,
+                        policy_optimizer=policy_optimizer,
+                        batch_size=batch_size, num_episodes=episodes,
+                        baseline=baseline, 
+                        avg_return_logger=avg_return_logger,
+                        loss_logger=loss_logger)
