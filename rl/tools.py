@@ -104,7 +104,9 @@ def effective_cost_function(log_probs, rewards_to_go, states,
 def do_pg_training(policy, env, max_episode_timesteps, 
                     policy_optimizer, batch_size, num_batches, 
                         critic_optimizer=None,
-                        baseline=None, value_modelstepper=None, discount=1.0, verbose=True):
+                        baseline=None, value_modelstepper=None, discount=1.0, 
+                        avg_return_logger=None, 
+                        loss_logger=None, verbose=True):
     """ Run vanilla policy-grad training on the given policy network and environment.
 
         Parameters:
@@ -206,6 +208,12 @@ def do_pg_training(policy, env, max_episode_timesteps,
                 if baseline == 'value_model':
                     print("Value model loss fn: {0:.3f}".format(value_modelstepper.losses[-1]))
     
+            #loggers, if any
+            if avg_return_logger is not None:
+                avg_return_logger(avg_return)
+            if loss_logger is not None:
+                loss_logger(loss.detach().item())
+
             policy_optimizer.zero_grad()
             loss.backward(retain_graph=True)
             policy_optimizer.step()
