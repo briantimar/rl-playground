@@ -102,7 +102,8 @@ def effective_cost_function(log_probs, rewards_to_go, states,
     return J_baseline, J_no_baseline
     
 def do_pg_training(policy, env, max_episode_timesteps, 
-                    optimizer, batch_size, num_batches, 
+                    policy_optimizer, batch_size, num_batches, 
+                        critic_optimizer=None,
                         baseline=None, value_modelstepper=None, discount=1.0, verbose=True):
     """ Run vanilla policy-grad training on the given policy network and environment.
 
@@ -114,6 +115,9 @@ def do_pg_training(policy, env, max_episode_timesteps,
         batch_size: how many episodes to batch together when performing policy updates
         num_batches: how many batch updates to perform before halting training."""
     
+    from torch.nn import MSELoss
+    value_lossfn = MSELoss()
+
     BASELINE_TYPES = ['running_average_Q', 'external_value_model', 'policy_value_model']
 
     if baseline is not None and baseline not in BASELINE_TYPES:
@@ -141,9 +145,10 @@ def do_pg_training(policy, env, max_episode_timesteps,
             batch_Q = []
             # and rewards, to see model progress
             batch_returns = []
+            batch_critics = []
             for i in range(batch_size):
                 # run a single episode
-                states, actions, rewards, log_probs = do_episode(policy, env, 
+                states, actions, rewards, log_probs, critics = do_episode(policy, env, 
                                                 max_timesteps=max_episode_timesteps, stop_on_done=True)
                 #Q-values for the episode
                 rewards_to_go = compute_rewards_to_go(rewards, discount=discount)
@@ -155,11 +160,16 @@ def do_pg_training(policy, env, max_episode_timesteps,
                     value_model = None
                     running_average_Q = .9 * running_average_Q + .1 * rewards_to_go.mean().numpy()
 
-                elif baseline == 'value_model':
-                    baseline_type=baseline
+                elif baseline == 'external_value_model':
+                    baseline_type='value_model'
                     external_baseline = None
                     value_model = value_modelstepper.model
                 
+                elif baseline == 'policy_value_model':
+                    baseline_type = 'external'
+                    external_baseline = critics
+                    value_model = None
+
                 elif baseline is None:
                     baseline_type = baseline
                     external_baseline = None
@@ -175,14 +185,15 @@ def do_pg_training(policy, env, max_episode_timesteps,
                 batch_states.append(states[:-1])
                 batch_Q.append(rewards_to_go)
                 batch_returns.append(rewards.sum())
+                batch_critics.append(critics)
 
-            #after a few trajectories have been collected, update policy parameters, and value model if 
-            # appropriate
-            if baseline == 'value_model':
+            states_all = torch.cat(batch_states)            
+            Q_all = torch.cat(batch_Q).view(-1,1)
+
+            #update external value model, if appropriate
+            if baseline == 'external_value_model':
                 #update value function model
-                states_all = torch.cat(batch_states)            
-                Q_all = torch.cat(batch_Q)
-                value_modelstepper.step(states_all, Q_all.view(-1,1))
+                value_modelstepper.step(states_all, Q_all)
 
             loss = torch.stack(batch_costfn).mean()
             loss_nb = torch.stack(batch_costfn_nb).mean()
@@ -194,10 +205,18 @@ def do_pg_training(policy, env, max_episode_timesteps,
                 print("Avg return for batch {0}: {1:.3f}".format(ib, avg_return))
                 if baseline == 'value_model':
                     print("Value model loss fn: {0:.3f}".format(value_modelstepper.losses[-1]))
-            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+    
+            policy_optimizer.zero_grad()
+            loss.backward(retain_graph=True)
+            policy_optimizer.step()
+
+            # gradient step WRT value accuracy
+            if baseline == 'policy_value_model':
+                critics_all = torch.cat(batch_critics).view(-1,1)
+                value_loss = value_lossfn(critics_all, Q_all)
+                critic_optimizer.zero_grad()
+                value_loss.backward()
+                critic_optimizer.step()
     
     except KeyboardInterrupt:
         print("Halting training early!")
