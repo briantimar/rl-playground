@@ -8,23 +8,38 @@ class Policy(torch.nn.Module):
         The output layer defines logits, which should be fed to a softmax to obtain action
         probabilities. """
 
-    def __init__(self):
+    def __init__(self, output_critic=False):
+        """ `output_critic`: if True, network will also emit scalar 'critic' signal."""
         super().__init__()
+        self.output_critic = output_critic
     
     def sample_action_with_log_prob(self, input):
         """Sample action and compute its log-probability under model and input. 
             input: tensor of input values
-            action: (batch_size, k) tensor of actions, with k an integer in 0, ... , num_actions -1"""
-        logits = self(input)
+            action: (batch_size, k) tensor of actions, with k an integer in 0, ... , num_actions -1
+            If `output_critic` is True: returns action, logprobs, critc
+                Otherwise, returns action, logprobs
+                """
+
+        outputs = self(input)
+        # if model computes critic, don't include in logits
+        if self.output_critic:
+            # print(outputs.shape)
+            logits = outputs[..., :-1]
+            critic = outputs[..., -1]
+        else:
+            logits = outputs
+            critic = None
         probs = Categorical(logits=logits)
         action = probs.sample()
         logprobs = probs.log_prob(action)
-        return action, logprobs
+        if critic is None:
+            return action, logprobs
+        return action, logprobs, critic
 
     def save(self, path):
         """Saves the model's state dict to the path provided"""
         torch.save(self.state_dict(), path)
-
     
     def load(self, path):
         """Load model from param_dict at the specified path."""
@@ -34,8 +49,8 @@ class Policy(torch.nn.Module):
 
 class MLP(Policy):
 
-    def __init__(self, layer_sizes, activation=torch.relu):
-        super().__init__()
+    def __init__(self, layer_sizes, output_critic=False,activation=torch.relu):
+        super().__init__(output_critic=output_critic)
         self.layer_sizes = layer_sizes
         #number of layers including input and output
         self.num_layer = len(layer_sizes)
