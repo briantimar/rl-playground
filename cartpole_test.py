@@ -9,8 +9,8 @@ from rl.tools import do_episode, compute_rewards_to_go
 policy = MLP([4,20,20,3], activation=torch.relu, output_critic=True)
 env = gym.make('CartPole-v0')
 max_timesteps=200
-batch_size = 32
-num_batches = 40
+batch_size = 12
+num_episodes = 100
 
 # states, actions, rewards, log_probs = do_episode(policy, env, max_timesteps)
 
@@ -22,6 +22,6 @@ critic_optimizer = torch.optim.Adam(policy.parameters(),lr=.01)
 #                                 hyperparams=value_model_hp, optimizer=torch.optim.Adam)
 
 avg_returns = do_pg_training(policy, env, max_timesteps, 
-                            policy_optimizer=policy_optimizer,batch_size=batch_size, num_batches=num_batches, 
+                            policy_optimizer=policy_optimizer,batch_size=batch_size, num_episodes=num_episodes,
                             critic_optimizer=critic_optimizer,
                             baseline='policy_value_model')
