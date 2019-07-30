@@ -70,7 +70,11 @@ def effective_cost_function(log_probs, rewards_to_go, states,
         baseline: if not None, string specifying the type of baseline to apply
             if 'value_model': value_model should take (T,d) tensor of states, return (T,) tensor of values
             if 'external': external_baseline should hold (T,) tensor of baseline values to subtract.
+        returns: (J_baseline, J_no_baseline), a tuple of scalar tensors holding the baselined and non-baselined
+        cost functions respectively.
         """
+    J_no_baseline = - (rewards_to_go * log_probs).sum()
+
     if baseline is not None:
         if (baseline not in BASELINE_TYPES):
             raise NotImplementedError
@@ -86,14 +90,16 @@ def effective_cost_function(log_probs, rewards_to_go, states,
             baselinefn = lambda s: external_baseline
 
         rewards_to_go = rewards_to_go - baselinefn(states)
-
-    return - (rewards_to_go * log_probs).sum()
+    J_baseline = - (rewards_to_go * log_probs).sum()
+    return J_baseline, J_no_baseline
 
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
                     optimizer, batch_size, num_batches, 
                         baseline=None, value_modelstepper=None, discount=1.0, verbose=True):
     """ Run vanilla policy-grad training on the given policy network and environment.
+
+        Parameters:
         policy: torch model for the stochastic policy
         env: openai gym environment
         max_episode_timesteps: max number of timesteps to run an episode
@@ -108,12 +114,10 @@ def do_vpg_training(policy, env, max_episode_timesteps,
     avg_returns = []
     try:
         # running average of the reward-to-go
-        running_average_Q = torch.zeros(1, max_episode_timesteps)
+        running_average_Q = 0
 
         for ib in range(num_batches):
             batch_rewards = []
-            batch_log_probs = []
-            batch_states = []
             for i in range(batch_size):
                 # run a single episode
                 states, actions, rewards, log_probs = do_episode(policy, env, 

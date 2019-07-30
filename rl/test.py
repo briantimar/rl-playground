@@ -24,9 +24,10 @@ class testVPG(unittest.TestCase):
         rewards_to_go = torch.tensor([2.,1.])
         states = torch.ones(2)
         external_baseline = torch.tensor([1.,1.])
-        J = effective_cost_function(lps, rewards_to_go,states,baseline='external',
+        J, J_nb = effective_cost_function(lps, rewards_to_go,states,baseline='external',
                                             external_baseline=external_baseline)
         self.assertAlmostEqual(J.detach().numpy(), np.log(2))
+        self.assertAlmostEqual(J_nb.detach().numpy(), 3 * np.log(2))
 
 class testModels(unittest.TestCase):
 
