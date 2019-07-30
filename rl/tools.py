@@ -102,7 +102,7 @@ def effective_cost_function(log_probs, rewards_to_go, states,
     return J_baseline, J_no_baseline
     
 def do_pg_training(policy, env, max_episode_timesteps, 
-                    policy_optimizer, batch_size, num_batches, 
+                    policy_optimizer, batch_size, num_episodes,
                         critic_optimizer=None,
                         baseline=None, value_modelstepper=None, discount=1.0, 
                         avg_return_logger=None, 
@@ -115,7 +115,7 @@ def do_pg_training(policy, env, max_episode_timesteps,
         max_episode_timesteps: max number of timesteps to run an episode
         optimizer: torch optimizer for policy parameters.
         batch_size: how many episodes to batch together when performing policy updates
-        num_batches: how many batch updates to perform before halting training."""
+        num_episodes: total number of episodes to use in training."""
     
     from torch.nn import MSELoss
     value_lossfn = MSELoss()
@@ -131,12 +131,25 @@ def do_pg_training(policy, env, max_episode_timesteps,
     if baseline != 'policy_value_model' and policy.output_critic:
         raise ValueError("Model provided is outputting critic signal.")
 
+    num_batches = num_episodes // batch_size + 1
+    if verbose:
+        print("Training for %d episodes in batches of size %d" % (num_episodes, batch_size))
+
+    def get_batch_size(i): 
+        if i < num_batches - 1:
+            return batch_size
+        return num_episodes % batch_size
+
     avg_returns = []
     try:
         # running average of the reward-to-go
         running_average_Q = 0
 
         for ib in range(num_batches):
+            batch_size = get_batch_size(ib)
+            if batch_size == 0:
+                break
+
             #collect cost function components with baseline...
             batch_costfn = []
             # ... and without

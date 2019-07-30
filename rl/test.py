@@ -52,6 +52,7 @@ class testVPG(unittest.TestCase):
         self.assertAlmostEqual(J.detach().numpy(), np.log(2))
         self.assertAlmostEqual(J_nb.detach().numpy(), 3 * np.log(2))
 
+
 class testModels(unittest.TestCase):
 
     def test_policy(self):
