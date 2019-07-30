@@ -9,7 +9,9 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
         max_timesteps: max number of timesteps the environment is allowed to run (ie one episode)
         stop_on_done: bool, whether to stop when the environment is 'done'.
         render: bool, whether to render the environment.
-        Returns: states, actions, rewards,  log_probs
+        Returns: states, actions, rewards,  log_probs, critics
+            where critics is tensor of critic values emitted by the model, if its output_critic is set to True, and
+            otherwise None.
         """
     #sample initial state from the environment
     obs = torch.tensor(env.reset(),dtype=torch.float32)
@@ -17,14 +19,20 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
     rewards = []
     action_trajectory = []
     log_probs = []
+    critics = []
 
     for t in range(max_timesteps):
         if render:
             env.render()
         #sample action from policy
-        action, log_prob = policy.sample_action_with_log_prob(obs)
+        if policy.output_critic:
+            action, log_prob, critic = policy.sample_action_with_log_prob(obs)
+        else:
+            action, log_prob = policy.sample_action_with_log_prob(obs)
+            critic = None
         action_trajectory.append(action)
         log_probs.append(log_prob)
+        critics.append(critic)
         #update the environment 
         obs, reward, done, __ = env.step(action.numpy())
         obs = torch.tensor(obs,dtype=torch.float32)
@@ -38,8 +46,10 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
     action_trajectory = torch.stack(action_trajectory)
     rewards = torch.tensor(rewards)
     log_probs = torch.stack(log_probs)
-
-    return state_trajectory, action_trajectory, rewards, log_probs
+    if policy.output_critic:
+        critics = torch.stack(critics)
+        return state_trajectory, action_trajectory, rewards, log_probs, critics
+    return state_trajectory, action_trajectory, rewards, log_probs, None
 
 def compute_rewards_to_go(rewards, discount=1.0):
     """ input: (T,) tensor of reward values received at each timestep.
@@ -110,6 +120,10 @@ def do_pg_training(policy, env, max_episode_timesteps,
         raise ValueError("Allowed baseline types: ", BASELINE_TYPES)
     if baseline == 'external_value_model' and value_modelstepper is None:
         raise ValueError("Please supply a value ModelStepper")
+    if baseline == 'policy_value_model' and not policy.output_critic:
+        raise ValueError("Model provided does not emit critic signal")
+    if baseline != 'policy_value_model' and policy.output_critic:
+        raise ValueError("Model provided is outputting critic signal.")
 
     avg_returns = []
     try:

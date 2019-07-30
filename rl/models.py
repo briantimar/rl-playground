@@ -20,11 +20,13 @@ class Policy(torch.nn.Module):
             If `output_critic` is True: returns action, logprobs, critc
                 Otherwise, returns action, logprobs
                 """
+
         outputs = self(input)
         # if model computes critic, don't include in logits
         if self.output_critic:
-            logits = outputs[:, :-1]
-            critic = outputs[:, -1]
+            # print(outputs.shape)
+            logits = outputs[..., :-1]
+            critic = outputs[..., -1]
         else:
             logits = outputs
             critic = None
