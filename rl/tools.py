@@ -56,36 +56,35 @@ def compute_rewards_to_go(rewards, discount=1.0):
         running_sum = Q[i]
     return Q   
 
-def make_running_average_Q_baseline(running_average_Q):
-    def b(states):
-        return running_average_Q.view(1,-1)
-    return b
-
-BASELINE_TYPES = ['running_average_Q', 'value_model']
+BASELINE_TYPES = ['external', 'value_model']
 
 def effective_cost_function(log_probs, rewards_to_go, states, 
-                                        running_average_Q=None,
                                         value_model = None,
-                                        baseline=None
+                                        external_baseline=None,
+                                        baseline=None,
                                                         ):
     """ Computes a scalar torch tensor whose gradient is an estimator of the expected-return cost function
-        log_probs: (N,T) tensor of log-probabilities
-        rewards_to_go: (N,T) tensor of future rewards from each action in trajectory
-        states: (N, T,d) tensor of states immediately prior to rewards
+        log_probs: (T,) tensor of log-probabilities
+        rewards_to_go: (T,) tensor of future rewards from each action in trajectory
+        states: (T,d) tensor of states immediately prior to rewards
         baseline: if not None, string specifying the type of baseline to apply
-        value
+            if 'value_model': value_model should take (T,d) tensor of states, return (T,) tensor of values
+            if 'external': external_baseline should hold (T,) tensor of baseline values to subtract.
         """
     if baseline is not None:
         if (baseline not in BASELINE_TYPES):
             raise NotImplementedError
-        if baseline == 'running_average_Q':
-            if running_average_Q is None:
-                raise ValueError("Please supply running average Q")
-            baselinefn = make_running_average_Q_baseline(running_average_Q)
+
         elif baseline == 'value_model':
             if value_model is None:
                 raise ValueError("Please supply value model")
-            baselinefn = lambda s: value_model(s.view(-1, states.size(-1))).view(states.size(0), states.size(1))
+            baselinefn = lambda s: value_model(s)
+
+        elif baseline == 'external':
+            if external_baseline is None:
+                raise ValueError("Please supply external baseline")
+            baselinefn = lambda s: external_baseline
+
         rewards_to_go = rewards_to_go - baselinefn(states)
 
     return - (rewards_to_go * log_probs).mean()
