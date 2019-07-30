@@ -31,6 +31,21 @@ class testVPG(unittest.TestCase):
 
 class testModels(unittest.TestCase):
 
+    def test_policy(self):
+        from .models import MLP
+        pol1 = MLP([1, 10, 2], output_critic=False)
+        x = torch.ones(5,1)
+        action, logprobs = pol1.sample_action_with_log_prob(x)
+        self.assertEqual(tuple(action.shape), (5,))
+        self.assertEqual(tuple(logprobs.shape), (5,))
+
+        pol2 = MLP([1, 10, 3], output_critic=True)
+        action, logprobs, critic = pol2.sample_action_with_log_prob(x)
+        for output in [action, logprobs, critic]:
+            self.assertEqual(tuple(output.shape), (5,))
+
+
+
     def test_model_stepper(self):
         from .models import ModelStepper, MLP
         from .models import HyperParams
