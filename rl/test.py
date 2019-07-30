@@ -6,12 +6,17 @@ class testVPG(unittest.TestCase):
 
     def test_compute_reward_to_go(self):
         from .tools import compute_rewards_to_go
-        rewards = torch.tensor([[1, 0, 1, 1], 
-                                [0, 0, 1, 1]],dtype=torch.float)
-        Qtarget = torch.tensor([[3, 2, 2, 1], 
-                                [2, 2, 2, 1]],dtype=torch.float)
+        rewards = torch.tensor([1, 0, 1, 1], 
+                                dtype=torch.float)
+        Qtarget = torch.tensor([3, 2, 2, 1], 
+                                dtype=torch.float)
         Q = compute_rewards_to_go(rewards)
+        gamma = .5
+        Q_discount = compute_rewards_to_go(rewards, discount=gamma)
+        Qtarget_discount = torch.tensor([1 + .5*.5*1.5, .5 * 1.5, 1.5, 1], 
+                                dtype=torch.float)
         self.assertAlmostEqual( (Q - Qtarget).abs().sum().numpy(), 0)
+        self.assertAlmostEqual( (Q_discount - Qtarget_discount).abs().sum().numpy(), 0 )
 
 class testModels(unittest.TestCase):
 

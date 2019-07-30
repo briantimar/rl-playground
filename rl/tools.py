@@ -42,16 +42,18 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
     return state_trajectory, action_trajectory, rewards, log_probs
 
 def compute_rewards_to_go(rewards, discount=1.0):
-    """ input: (N, T) tensor of reward values received at each timestep.
-        output: (N, T) tensor of rewards to go Q, where 
-            Q[i] = sum_j=i^T gamma^j r[j]
+    """ input: (T,) tensor of reward values received at each timestep.
+        output: (T,) tensor of rewards to go Q, where 
+            Q[i] = sum_j=i^T gamma^(j-i) r[j]
             and gamma is the time-discounting factor.
         """
     Q = torch.zeros_like(rewards)
-    running_sum = torch.zeros(rewards.size(0))
-    for i in reversed(range(Q.size(1))):
-        running_sum += rewards[:,i] * discount**i
-        Q[:,i] = running_sum
+    Q.copy_(rewards)
+    T = len(Q)
+    running_sum = 0
+    for i in reversed(range(T)):
+        Q[i] = Q[i] + discount * running_sum
+        running_sum = Q[i]
     return Q   
 
 def make_running_average_Q_baseline(running_average_Q):
