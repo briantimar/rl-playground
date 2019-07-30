@@ -91,7 +91,7 @@ def effective_cost_function(log_probs, rewards_to_go, states,
     J_baseline = - (rewards_to_go * log_probs).sum()
     return J_baseline, J_no_baseline
     
-def do_vpg_training(policy, env, max_episode_timesteps, 
+def do_pg_training(policy, env, max_episode_timesteps, 
                     optimizer, batch_size, num_batches, 
                         baseline=None, value_modelstepper=None, discount=1.0, verbose=True):
     """ Run vanilla policy-grad training on the given policy network and environment.
@@ -104,11 +104,11 @@ def do_vpg_training(policy, env, max_episode_timesteps,
         batch_size: how many episodes to batch together when performing policy updates
         num_batches: how many batch updates to perform before halting training."""
     
-    BASELINE_TYPES = ['running_average_Q', 'value_model']
+    BASELINE_TYPES = ['running_average_Q', 'external_value_model', 'policy_value_model']
 
     if baseline is not None and baseline not in BASELINE_TYPES:
         raise ValueError("Allowed baseline types: ", BASELINE_TYPES)
-    if baseline == 'value_model' and value_modelstepper is None:
+    if baseline == 'external_value_model' and value_modelstepper is None:
         raise ValueError("Please supply a value ModelStepper")
 
     avg_returns = []
@@ -189,6 +189,7 @@ def do_vpg_training(policy, env, max_episode_timesteps,
         print("Halting training early!")
 
     return avg_returns
+
 
 def get_sample_trajectory(policy, env, halt_on_done=False, max_timesteps=200):
     """ Sample an action trajectory from a particular policy model. """
