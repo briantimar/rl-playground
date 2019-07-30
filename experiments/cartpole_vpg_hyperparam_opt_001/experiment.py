@@ -7,7 +7,8 @@ sys.path.append('../..')
 
 from ingredients import model, environment
 from ingredients import get_model, get_env
-training = Experiment('do-cartpole-training', 
+name = "cartpole-vpg-hyperparam-001"
+training = Experiment(name, 
                         ingredients=(model, environment))
 
 #log training stats in Mongodb
@@ -47,9 +48,9 @@ def train( max_episode_timesteps,
 
     env = get_env()
     def avg_return_logger(r):
-        training.log_scalar("training.avg_return", r)
+        training.log_scalar(name + ".avg_return", r)
     def loss_logger(l):
-        training.log_scalar("training.loss", l)
+        training.log_scalar(name + ".loss", l)
 
     avg_return = do_pg_training(policy, env, max_episode_timesteps,
                         policy_optimizer=policy_optimizer,
