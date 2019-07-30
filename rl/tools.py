@@ -158,7 +158,7 @@ def do_vpg_training(policy, env, max_episode_timesteps,
 
                 batch_costfn.append(J)
                 batch_costfn_nb.append(J_nb)    
-                batch_states.append(states)
+                batch_states.append(states[:-1])
                 batch_Q.append(rewards_to_go)
                 batch_returns.append(rewards.sum())
 
@@ -166,9 +166,9 @@ def do_vpg_training(policy, env, max_episode_timesteps,
             # appropriate
             if baseline == 'value_model':
                 #update value function model
-                states_all = torch.stack(batch_states)            
-                Q_all = torch.stack(batch_Q)
-                value_modelstepper.step(states_all, Q_all)
+                states_all = torch.cat(batch_states)            
+                Q_all = torch.cat(batch_Q)
+                value_modelstepper.step(states_all, Q_all.view(-1,1))
 
             loss = torch.stack(batch_costfn).mean()
             loss_nb = torch.stack(batch_costfn_nb).mean()
