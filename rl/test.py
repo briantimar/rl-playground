@@ -18,6 +18,16 @@ class testVPG(unittest.TestCase):
         self.assertAlmostEqual( (Q - Qtarget).abs().sum().numpy(), 0)
         self.assertAlmostEqual( (Q_discount - Qtarget_discount).abs().sum().numpy(), 0 )
 
+    def test_effective_cost_function(self):
+        from .tools import effective_cost_function
+        lps = torch.ones(2) * np.log(.5)
+        rewards_to_go = torch.tensor([2.,1.])
+        states = torch.ones(2)
+        external_baseline = torch.tensor([1.,1.])
+        J = effective_cost_function(lps, rewards_to_go,states,baseline='external',
+                                            external_baseline=external_baseline)
+        self.assertAlmostEqual(J.detach().numpy(), np.log(2))
+
 class testModels(unittest.TestCase):
 
     def test_model_stepper(self):

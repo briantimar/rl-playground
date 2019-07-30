@@ -87,7 +87,7 @@ def effective_cost_function(log_probs, rewards_to_go, states,
 
         rewards_to_go = rewards_to_go - baselinefn(states)
 
-    return - (rewards_to_go * log_probs).mean()
+    return - (rewards_to_go * log_probs).sum()
 
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
