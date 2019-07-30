@@ -56,8 +56,6 @@ def compute_rewards_to_go(rewards, discount=1.0):
         running_sum = Q[i]
     return Q   
 
-BASELINE_TYPES = ['external', 'value_model']
-
 def effective_cost_function(log_probs, rewards_to_go, states, 
                                         value_model = None,
                                         external_baseline=None,
@@ -76,7 +74,7 @@ def effective_cost_function(log_probs, rewards_to_go, states,
     J_no_baseline = - (rewards_to_go * log_probs).sum()
 
     if baseline is not None:
-        if (baseline not in BASELINE_TYPES):
+        if (baseline not in ['external', 'value_model']):
             raise NotImplementedError
 
         elif baseline == 'value_model':
@@ -92,7 +90,6 @@ def effective_cost_function(log_probs, rewards_to_go, states,
         rewards_to_go = rewards_to_go - baselinefn(states)
     J_baseline = - (rewards_to_go * log_probs).sum()
     return J_baseline, J_no_baseline
-
     
 def do_vpg_training(policy, env, max_episode_timesteps, 
                     optimizer, batch_size, num_batches, 
@@ -106,7 +103,10 @@ def do_vpg_training(policy, env, max_episode_timesteps,
         optimizer: torch optimizer for policy parameters.
         batch_size: how many episodes to batch together when performing policy updates
         num_batches: how many batch updates to perform before halting training."""
-    if baseline not in BASELINE_TYPES:
+    
+    BASELINE_TYPES = ['running_average_Q', 'value_model']
+
+    if baseline is not None and baseline not in BASELINE_TYPES:
         raise ValueError("Allowed baseline types: ", BASELINE_TYPES)
     if baseline == 'value_model' and value_modelstepper is None:
         raise ValueError("Please supply a value ModelStepper")
@@ -117,44 +117,70 @@ def do_vpg_training(policy, env, max_episode_timesteps,
         running_average_Q = 0
 
         for ib in range(num_batches):
-            batch_rewards = []
+            #collect cost function components with baseline...
+            batch_costfn = []
+            # ... and without
+            batch_costfn_nb = []
+
+            #also keep track of state trajectories and corresponding Q-values
+            batch_states = []
+            batch_Q = []
+            # and rewards, to see model progress
+            batch_returns = []
             for i in range(batch_size):
                 # run a single episode
                 states, actions, rewards, log_probs = do_episode(policy, env, 
-                                                max_timesteps=max_episode_timesteps, stop_on_done=False)
-                batch_rewards.append(rewards)
-                batch_log_probs.append(log_probs)
-                batch_states.append(states[:-1])
-    
-            batch_rewards = torch.stack(batch_rewards)
-            batch_log_probs = torch.stack(batch_log_probs)
-            batch_states = torch.stack(batch_states)
+                                                max_timesteps=max_episode_timesteps, stop_on_done=True)
+                #Q-values for the episode
+                rewards_to_go = compute_rewards_to_go(rewards, discount=discount)
+                
+                #obtain episode's contribution to the gradient
+                if baseline=='running_average_Q':
+                    baseline_type = 'external'
+                    external_baseline = running_average_Q * torch.ones(len(rewards_to_go))
+                    value_model = None
+                    running_average_Q = .9 * running_average_Q + .1 * rewards_to_go.mean().numpy()
 
-            rewards_to_go = compute_rewards_to_go(batch_rewards, discount=discount)
+                elif baseline == 'value_model':
+                    baseline_type=baseline
+                    external_baseline = None
+                    value_model = value_modelstepper.model
+                
+                elif baseline is None:
+                    baseline_type = baseline
+                    external_baseline = None
+                    value_model = None
 
-            if baseline == 'running_average_Q':
-                #update the running average reward
-                running_average_Q = .9 * running_average_Q + .1 * rewards_to_go.mean(dim=0)
-            elif baseline == 'value_model':
+                J, J_nb = effective_cost_function(log_probs, rewards_to_go, states, 
+                                                        baseline=baseline_type,
+                                                        external_baseline=external_baseline, 
+                                                        value_model=value_model)
+
+                batch_costfn.append(J)
+                batch_costfn_nb.append(J_nb)    
+                batch_states.append(states)
+                batch_Q.append(rewards_to_go)
+                batch_returns.append(rewards.sum())
+
+            #after a few trajectories have been collected, update policy parameters, and value model if 
+            # appropriate
+            if baseline == 'value_model':
                 #update value function model
-                states_all = batch_states.view(-1, batch_states.size(-1))
-                rtg_all = rewards_to_go.view(-1, 1)
-                value_modelstepper.step(states_all, rtg_all)
-    
-            loss = effective_cost_function(batch_log_probs, rewards_to_go, batch_states,  
-                                                            running_average_Q=running_average_Q,
-                                                            value_model=value_modelstepper.model,
-                                                            baseline=baseline)
-            
-            avg_return = batch_rewards.sum(dim=1).mean().numpy()
-            std_return = batch_rewards.sum(dim=1).std().numpy()
+                states_all = torch.stack(batch_states)            
+                Q_all = torch.stack(batch_Q)
+                value_modelstepper.step(states_all, Q_all)
+
+            loss = torch.stack(batch_costfn).mean()
+            loss_nb = torch.stack(batch_costfn_nb).mean()
+            batch_returns = torch.stack(batch_returns)
+            avg_return = batch_returns.mean()
+            avg_returns.append(avg_return)
 
             if verbose:
                 print("Avg return for batch {0}: {1:.3f}".format(ib, avg_return))
                 if baseline == 'value_model':
                     print("Value model loss fn: {0:.3f}".format(value_modelstepper.losses[-1]))
-            avg_returns.append(avg_return)
-
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

@@ -16,11 +16,10 @@ num_batches = 40
 
 optimizer = torch.optim.Adam(policy.parameters(),lr=.01)
 
-value_model_hp = HyperParams(lr=.1, layer_sizes=(4, 20, 20, 1))
-value_modelstepper = ModelStepper(MLP, lossfn=torch.nn.MSELoss(), 
-                                hyperparams=value_model_hp, optimizer=torch.optim.Adam)
+# value_model_hp = HyperParams(lr=.1, layer_sizes=(4, 20, 20, 1))
+# value_modelstepper = ModelStepper(MLP, lossfn=torch.nn.MSELoss(), 
+#                                 hyperparams=value_model_hp, optimizer=torch.optim.Adam)
 
 avg_returns = do_vpg_training(policy, env, max_timesteps, 
                             optimizer=optimizer,batch_size=batch_size, num_batches=num_batches, 
-                            value_modelstepper=value_modelstepper,
-                            baseline='value_model')
+                            baseline=None)
