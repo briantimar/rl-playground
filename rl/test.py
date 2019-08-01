@@ -74,9 +74,6 @@ class testModels(unittest.TestCase):
         action, logprobs, critic = pol2.sample_action_with_log_prob(x2)
         self.assertEqual(tuple(action.shape), ())
 
-
-
-
     def test_model_stepper(self):
         from .models import ModelStepper, MLP
         from .models import HyperParams
@@ -92,6 +89,15 @@ class testModels(unittest.TestCase):
             ms.step(x, y)
         yout = ms.eval(x)
         self.assertAlmostEqual(yout.detach().item(), y.item())
+
+    def test_policy_family(self):
+        from .models import MLP, PolicyFamily
+        pol1 = MLP([1, 4, 2])
+        pol2 = MLP([1, 5, 2])
+        pf = PolicyFamily([pol1, pol2])
+        action, __ = pf.sample_action_with_log_prob(torch.ones(1))
+        a1, __ = pol1.sample_action_with_log_prob(torch.ones(1))
+        self.assertEqual(action.shape, a1.shape)
 
 if __name__ == '__main__':
     unittest.main()
