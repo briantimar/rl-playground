@@ -87,7 +87,7 @@ class PolicyFamily:
         """Returns a single action by averaging over model logits.
              Each policy is assigned an equal weight. """
 
-        logits_all = [p(state) for p in self.policies]
+        logits_all = [p.forward(state) for p in self.policies]
         mean_logits = torch.stack(logits_all).mean(dim=0)
         probs = Categorical(logits=mean_logits)
         action = probs.sample()
