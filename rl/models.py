@@ -76,6 +76,26 @@ class MLP(Policy):
             activation = torch.relu
         return cls(layer_sizes, activation=activation)
 
+class PolicyFamily:
+    """ A collection of policies, which can vote on actions during rollout."""
+
+    def __init__(self, policies):
+        self.policies = policies
+        self.output_critic = False
+
+    def sample_action_with_log_prob(self, state):
+        """Returns a single action by averaging over model logits.
+             Each policy is assigned an equal weight. """
+
+        logits_all = [p(state) for p in self.policies]
+        mean_logits = torch.stack(logits_all).mean(dim=0)
+        probs = Categorical(logits=mean_logits)
+        action = probs.sample()
+        logprobs = probs.log_prob(action)
+        return action, logprobs
+
+
+
 @dataclass
 class HyperParams:
     """Class holding hyperparameters for defining and training pytorch models"""
