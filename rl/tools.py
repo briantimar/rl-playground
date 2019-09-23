@@ -2,13 +2,16 @@ import numpy as np
 import gym
 import torch
 
-def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
+def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False, 
+                        stochastic=True):
     """ Run one episode.
         policy: a stochastic policy model. Given current states as inputs, outputs logits which define probabilities of various actions.
         env: openai gym environment.
         max_timesteps: max number of timesteps the environment is allowed to run (ie one episode)
         stop_on_done: bool, whether to stop when the environment is 'done'.
         render: bool, whether to render the environment.
+        stochastic: bool, whether to sample actions from the model stochastically. If False, the policy will act deterministically
+        by selecting the most likely action at each timestep.
         Returns: states, actions, rewards,  log_probs, critics
             where critics is tensor of critic values emitted by the model, if its output_critic is set to True, and
             otherwise None.
@@ -26,9 +29,9 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False):
             env.render()
         #sample action from policy
         if policy.output_critic:
-            action, log_prob, critic = policy.sample_action_with_log_prob(obs)
+            action, log_prob, critic = policy.sample_action_with_log_prob(obs, stochastic=stochastic)
         else:
-            action, log_prob = policy.sample_action_with_log_prob(obs)
+            action, log_prob = policy.sample_action_with_log_prob(obs, stochastic=stochastic)
             critic = None
         action_trajectory.append(action)
         log_probs.append(log_prob)

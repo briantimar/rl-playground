@@ -15,6 +15,7 @@ class testTools(unittest.TestCase):
         
         policy = MLP([4,5,2], activation=torch.relu, output_critic=False)
         states, actions, rewards, logprobs, critics = do_episode(policy, env, max_timesteps=max_timesteps,
+                                                                    stochastic=False,
                                                                     stop_on_done=False)
         self.assertEqual(tuple(states.shape), (max_timesteps+1, 4))
         for s in [actions, rewards, logprobs]:
@@ -89,7 +90,7 @@ class testModels(unittest.TestCase):
             ms.step(x, y)
         yout = ms.eval(x)
         self.assertAlmostEqual(yout.detach().item(), y.item(), places=4)
-        
+
     def test_policy_family(self):
         from .models import MLP, PolicyFamily
         pol1 = MLP([1, 4, 2])

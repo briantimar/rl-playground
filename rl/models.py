@@ -13,12 +13,13 @@ class Policy(torch.nn.Module):
         super().__init__()
         self.output_critic = output_critic
     
-    def sample_action_with_log_prob(self, input):
+    def sample_action_with_log_prob(self, input, stochastic=True):
         """Sample action and compute its log-probability under model and input. 
             input: tensor of input values
             action: (batch_size, k) tensor of actions, with k an integer in 0, ... , num_actions -1
             If `output_critic` is True: returns action, logprobs, critc
                 Otherwise, returns action, logprobs
+            stochastic: bool. If false, the most likely action is returned deterministically.
                 """
 
         outputs = self(input)
@@ -30,9 +31,13 @@ class Policy(torch.nn.Module):
         else:
             logits = outputs
             critic = None
-        probs = Categorical(logits=logits)
-        action = probs.sample()
-        logprobs = probs.log_prob(action)
+        if stochastic:
+            probs = Categorical(logits=logits)
+            action = probs.sample()
+            logprobs = probs.log_prob(action)
+        else:
+            action = logits.argmax(dim=-1)
+            logprobs = torch.ones_like(action, dtype=torch.float)
         if critic is None:
             return action, logprobs
         return action, logprobs, critic
