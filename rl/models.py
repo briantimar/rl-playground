@@ -88,15 +88,19 @@ class PolicyFamily:
         self.policies = policies
         self.output_critic = False
 
-    def sample_action_with_log_prob(self, state):
+    def sample_action_with_log_prob(self, state, stochastic=True):
         """Returns a single action by averaging over model logits.
              Each policy is assigned an equal weight. """
 
         logits_all = [p.forward(state) for p in self.policies]
         mean_logits = torch.stack(logits_all).mean(dim=0)
-        probs = Categorical(logits=mean_logits)
-        action = probs.sample()
-        logprobs = probs.log_prob(action)
+        if stochastic:
+            probs = Categorical(logits=mean_logits)
+            action = probs.sample()
+            logprobs = probs.log_prob(action)
+        else:
+            action = mean_logits.argmax(dim=-1)
+            logprobs = torch.zeros_like(action, dtype=torch.float)
         return action, logprobs
 
 
