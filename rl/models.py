@@ -37,7 +37,7 @@ class Policy(torch.nn.Module):
             logprobs = probs.log_prob(action)
         else:
             action = logits.argmax(dim=-1)
-            logprobs = torch.ones_like(action, dtype=torch.float)
+            logprobs = torch.zeros_like(action, dtype=torch.float)
         if critic is None:
             return action, logprobs
         return action, logprobs, critic
