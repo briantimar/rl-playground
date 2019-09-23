@@ -88,8 +88,8 @@ class testModels(unittest.TestCase):
         for ep in range(hp.epochs):
             ms.step(x, y)
         yout = ms.eval(x)
-        self.assertAlmostEqual(yout.detach().item(), y.item())
-
+        self.assertAlmostEqual(yout.detach().item(), y.item(), places=4)
+        
     def test_policy_family(self):
         from .models import MLP, PolicyFamily
         pol1 = MLP([1, 4, 2])
