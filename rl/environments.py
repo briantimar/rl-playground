@@ -101,7 +101,7 @@ class CartPoleSwingUpEnv(gym.Env):
 
     def step(self, action):
         # Valid action
-        action = np.clip(action, -1.0, 1.0)[0]
+        action = np.clip(action, -1.0, 1.0)
         action *= self.force_mag
 
         noise_obs = self.stateUpdate(action, self.state, noise=self.noise)
