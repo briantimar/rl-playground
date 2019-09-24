@@ -1,3 +1,7 @@
+""" 
+    NOT MY CODE 
+    COPIED VERBATIM FROM https://github.com/google/brain-tokyo-workshop/tree/master/WANNRelease
+"""
 
 import math
 import gym
