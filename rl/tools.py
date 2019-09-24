@@ -24,11 +24,16 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False,
     log_probs = []
     critics = []
 
+    if not hasattr(policy, 'output_critic') or not policy.output_critic:
+        output_critic = False
+    else:
+        output_critic = True
+
     for t in range(max_timesteps):
         if render:
             env.render()
         #sample action from policy
-        if policy.output_critic:
+        if output_critic:
             action, log_prob, critic = policy.sample_action_with_log_prob(obs, stochastic=stochastic)
         else:
             action, log_prob = policy.sample_action_with_log_prob(obs, stochastic=stochastic)
@@ -49,7 +54,7 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False,
     action_trajectory = torch.stack(action_trajectory)
     rewards = torch.tensor(rewards)
     log_probs = torch.stack(log_probs)
-    if policy.output_critic:
+    if output_critic:
         critics = torch.stack(critics)
         return state_trajectory, action_trajectory, rewards, log_probs, critics
     return state_trajectory, action_trajectory, rewards, log_probs, None
