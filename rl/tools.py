@@ -54,6 +54,15 @@ def do_episode(policy, env, max_timesteps, stop_on_done=True, render=False,
         return state_trajectory, action_trajectory, rewards, log_probs, critics
     return state_trajectory, action_trajectory, rewards, log_probs, None
 
+def collect_returns(policy, env, max_timesteps, num_episodes, stochastic=True):
+    """Evaluate the given policy <num_episdodes> times in the given environment.
+        Returns: list of returns of length num_episodes"""
+    returns = []
+    for i in range(num_episodes):
+        __, __, rewards, __, __ = do_episode(policy, env, max_timesteps, stochastic=stochastic)
+        returns.append(sum(rewards))
+    return returns
+
 def compute_rewards_to_go(rewards, discount=1.0):
     """ input: (T,) tensor of reward values received at each timestep.
         output: (T,) tensor of rewards to go Q, where 
